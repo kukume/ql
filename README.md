@@ -14,16 +14,17 @@
 | 类型 | 公开仓库 |
 | 链接 | `https://github.com/kukume/ql.git` |
 | 定时 | `0 8 * * *`（每天拉一次更新即可） |
-| 白名单 | `baidu\|bilibili\|douyu\|ecloud\|kugou\|mihoyo\|nodeseek\|nodeloc\|smzdm\|weibo\|step` |
+| 白名单 | `baidu\|bilibili\|douyu\|ecloud\|kugou\|mihoyo\|nodeseek\|nodeloc\|smzdm\|weibo\|step\|netease` |
 | 黑名单 | `README\|utils` |
 | 依赖文件 | `utils` |
+| 文件后缀 | `js py` |
 | 分支 | `main` |
 | 自动添加任务 | 是 |
 
 命令行等价：
 
 ```bash
-ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|mihoyo|nodeseek|nodeloc|smzdm|weibo|step" "README|utils" "utils"
+ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|mihoyo|nodeseek|nodeloc|smzdm|weibo|step|netease" "README|utils" "utils" "main" "js py"
 ```
 
 订阅后会自动创建以下任务（cron 写在各脚本头部）：
@@ -41,8 +42,9 @@ ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|miho
 | `smzdm.js` | 什么值得买 | `32 6 * * *` |
 | `weibo.js` | 微博超话 | `51 4 * * *` |
 | `step.js` | 小米运动 / 乐心运动刷步 | `12 5 * * *` |
+| `ql_netease_play.py` | 网易云网页播放上报 | `18 8 * * *` |
 
-推送、开播提醒等 Telegram 实时任务没有迁过来，青龙只覆盖自动签到/刷步。
+推送、开播提醒等 Telegram 实时任务没有迁过来，青龙只覆盖自动签到/刷步/听歌。JS 和 Python 可以放在同一个订阅里，文件后缀填 `js py`。
 
 ## 环境变量
 
@@ -133,6 +135,23 @@ export SMZDM_COOKIE="cookie"
 export WEIBO_COOKIE="SUB=xxx; ..."
 ```
 
+### 网易云网页播放上报
+
+浏览器登录 [music.163.com](https://music.163.com/) 后，Cookie 整串里必须带 `MUSIC_U` 和 `__csrf`。网易 Cookie 本身含 `&`，多账号不要用 `&` 拼接。
+
+```
+export NETEASE_COOKIE="MUSIC_U=xxx; __csrf=xxx; ..."
+export NETEASE_SONG_ID="1864698228"
+export NETEASE_PLAY_COUNT="1"
+export NETEASE_WAIT="true"
+export NETEASE_PULL_AUDIO="true"
+export NETEASE_LEVEL="exhigh"
+```
+
+多账号：青龙里建多个同名 `NETEASE_COOKIE`，或一个变量里换行（每账号一行），也可用 `@#@` 分隔。`wait=true` 时每遍会等一首歌的时长，次数多时把任务超时调大。
+
+Python 依赖：`requests`、`pycryptodome`（或 `pycryptodomex`）。
+
 ### 刷步数
 
 ```
@@ -144,5 +163,5 @@ export LEXIN_STEP="cookie#userid#accessToken#20000#1"
 
 ## 运行环境
 
-- 青龙 2.15+（Node 18+，自带 `fetch`）
+- 青龙 2.15+（Node 18+，自带 `fetch`；Python 脚本需要 `requests` 和 `pycryptodome`）
 - 解析贴吧页面时如已安装 `cheerio` 会优先使用（青龙默认带）
