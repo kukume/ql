@@ -4,10 +4,10 @@
  * const $ = new Env("哔哩哔哩签到");
  *
  * export BILIBILI_COOKIE="SESSDATA=xxx; bili_jct=xxx; DedeUserID=xxx;"
- * 多账号用 & 或换行分隔
+ * 多账号：青龙建多个同名变量，或换行 / @#@ 分隔
  */
 
-const { Env, env, parseAccounts, request, sleep, cookieValue, runAccounts } = require('./utils');
+const { Env, loadAccounts, request, sleep, cookieValue, runAccounts } = require('./utils');
 
 const $ = new Env('哔哩哔哩签到');
 
@@ -104,7 +104,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('BILIBILI_COOKIE'), ['cookie']);
+  const accounts = await loadAccounts('BILIBILI_COOKIE', ['cookie']);
   await runAccounts($?.name || '哔哩哔哩', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

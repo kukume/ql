@@ -16,7 +16,7 @@
  * [{"leXinCookie":"...","leXinUserid":"...","leXinAccessToken":"...","step":20000}]
  */
 
-const { Env, env, parseAccounts, request, uuid, runAccounts } = require('./utils');
+const { Env, env, loadAccounts, request, uuid, runAccounts } = require('./utils');
 
 const $ = new Env('刷步数');
 const UA = 'MiFit6.14.0 (24129PN74C; Android 16; Density/2.75)';
@@ -168,10 +168,11 @@ async function sign(account) {
   return msgs.join('；');
 }
 
-function loadAccounts() {
-  if (env('STEP')) return parseAccounts(env('STEP'), ['miLoginToken', 'step', 'offset']);
-  const xiaomi = parseAccounts(env('XIAOMI_STEP'), ['miLoginToken', 'step', 'offset']);
-  const lexin = parseAccounts(env('LEXIN_STEP'), [
+async function collectAccounts() {
+  const combined = await loadAccounts('STEP', ['miLoginToken', 'step', 'offset']);
+  if (combined.length) return combined;
+  const xiaomi = await loadAccounts('XIAOMI_STEP', ['miLoginToken', 'step', 'offset']);
+  const lexin = await loadAccounts('LEXIN_STEP', [
     'leXinCookie',
     'leXinUserid',
     'leXinAccessToken',
@@ -182,7 +183,7 @@ function loadAccounts() {
 }
 
 (async () => {
-  await runAccounts($?.name || '刷步数', loadAccounts(), sign);
+  await runAccounts($?.name || '刷步数', await collectAccounts(), sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);
   process.exit(1);

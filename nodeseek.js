@@ -5,11 +5,11 @@
  *
  * export NODESEEK_COOKIE="cookie"
  * export NODESEEK_RANDOM="true"   # true 随机奖励，false 固定奖励
- * 多账号用 & 或换行分隔；若账号需要不同模式可用 JSON：
+ * 多账号：青龙建多个同名变量，或换行 / @#@ 分隔；若账号需要不同模式可用 JSON：
  * [{"cookie":"...","random":true,"remarks":"主号"}]
  */
 
-const { Env, env, parseAccounts, request, runAccounts } = require('./utils');
+const { Env, env, loadAccounts, request, runAccounts } = require('./utils');
 
 const $ = new Env('NodeSeek签到');
 
@@ -32,7 +32,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('NODESEEK_COOKIE'), ['cookie']);
+  const accounts = await loadAccounts('NODESEEK_COOKIE', ['cookie']);
   await runAccounts($?.name || 'NodeSeek', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

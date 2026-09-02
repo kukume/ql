@@ -13,8 +13,7 @@
 
 const {
   Env,
-  env,
-  parseAccounts,
+  loadAccounts,
   request,
   sleep,
   digits,
@@ -165,7 +164,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('ECLOUD'), ['cookie', 'eCookie']);
+  const accounts = await loadAccounts('ECLOUD', ['cookie', 'eCookie']);
   await runAccounts($?.name || '天翼云盘', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

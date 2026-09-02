@@ -3,13 +3,57 @@
 /** 公共方法，不要添加到青龙定时任务 */
 
 const crypto = require('crypto');
+const fs = require('fs');
+const { execFileSync } = require('child_process');
 
 const DEFAULT_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+const QL_AUTH_FILES = ['/ql/data/config/auth.json', '/ql/config/auth.json'];
+const QL_DB_FILES = ['/ql/data/db/database.sqlite', '/ql/db/database.sqlite'];
+const QL_API_BASES = ['http://127.0.0.1:5700', 'http://127.0.0.1:5701'];
+
 function env(name, fallback = '') {
   const value = process.env[name];
   return value == null || value === '' ? fallback : value;
+}
+
+function splitRawValues(raw) {
+  if (!raw) return [];
+  const text = String(raw).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  if (!text) return [];
+  if (text.includes('@#@')) {
+    return text.split('@#@').map((s) => s.trim()).filter(Boolean);
+  }
+  if (text.includes('\n')) {
+    return text.split('\n').map((s) => s.trim()).filter(Boolean);
+  }
+  return [text];
+}
+
+function parseOneAccount(item, extraKeys, index) {
+  if (item.startsWith('{')) {
+    try {
+      return normalizeAccount(JSON.parse(item), extraKeys, index);
+    } catch {
+      // fall through
+    }
+  }
+  const parts = item.split('#');
+  if (extraKeys.length && parts.length > 1) {
+    const obj = { remarks: `账号${index + 1}` };
+    extraKeys.forEach((key, i) => {
+      if (parts[i] != null && parts[i] !== '') obj[key] = parts[i];
+    });
+    if (parts.length > extraKeys.length) {
+      obj.remarks = parts[extraKeys.length] || obj.remarks;
+    }
+    return obj;
+  }
+  const obj = { remarks: `账号${index + 1}` };
+  if (extraKeys[0]) obj[extraKeys[0]] = item;
+  else obj.cookie = item;
+  return obj;
 }
 
 function parseAccounts(raw, extraKeys = []) {
@@ -25,34 +69,119 @@ function parseAccounts(raw, extraKeys = []) {
       // fall through to delimiter parsing
     }
   }
-  return text
-    .split(/[\n&]+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((item, index) => {
-      if (item.startsWith('{')) {
-        try {
-          return normalizeAccount(JSON.parse(item), extraKeys, index);
-        } catch {
-          // ignore
-        }
+  return splitRawValues(text).map((item, index) => parseOneAccount(item, extraKeys, index));
+}
+
+function qlAuthToken() {
+  for (const file of QL_AUTH_FILES) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const token = data.token || (data.tokens && data.tokens.desktop) || '';
+      if (token) return token;
+    } catch {
+      // ignore malformed auth.json
+    }
+  }
+  return '';
+}
+
+async function valuesFromQlApi(name) {
+  const token = qlAuthToken();
+  if (!token) return [];
+  let lastErr = null;
+  for (const base of QL_API_BASES) {
+    try {
+      const res = await request(`${base}/api/envs?searchValue=${encodeURIComponent(name)}`, {
+        headers: { authorization: `Bearer ${token}` },
+        timeout: 5000,
+      });
+      const rows = res.json?.data || [];
+      const values = [];
+      for (const row of rows) {
+        if (row?.name !== name) continue;
+        if (Number(row.status) !== 0) continue;
+        const value = String(row.value || '').trim();
+        if (value) values.push(value);
       }
-      const parts = item.split('#');
-      if (extraKeys.length && parts.length > 1) {
-        const obj = { remarks: `账号${index + 1}` };
-        extraKeys.forEach((key, i) => {
-          if (parts[i] != null && parts[i] !== '') obj[key] = parts[i];
-        });
-        if (parts.length > extraKeys.length) {
-          obj.remarks = parts[extraKeys.length] || obj.remarks;
-        }
-        return obj;
-      }
-      const obj = { remarks: `账号${index + 1}` };
-      if (extraKeys[0]) obj[extraKeys[0]] = item;
-      else obj.cookie = item;
-      return obj;
-    });
+      if (values.length) return values;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) console.log(`青龙 API 读取环境变量失败: ${lastErr.message || lastErr}`);
+  return [];
+}
+
+function valuesFromQlDb(name) {
+  const safeName = String(name).replace(/'/g, "''");
+  for (const db of QL_DB_FILES) {
+    try {
+      if (!fs.existsSync(db)) continue;
+      const out = execFileSync(
+        'sqlite3',
+        ['-json', db, `SELECT value FROM Envs WHERE name='${safeName}' AND status=0`],
+        { encoding: 'utf8', timeout: 5000 }
+      );
+      const rows = JSON.parse(out || '[]');
+      const values = rows
+        .map((row) => String(row.value || '').trim())
+        .filter(Boolean);
+      if (values.length) return values;
+    } catch (e) {
+      if (e.code !== 'ENOENT') console.log(`青龙数据库读取失败: ${e.message || e}`);
+    }
+  }
+  return [];
+}
+
+/**
+ * 多账号环境变量。
+ *
+ * 青龙会把同名变量 join('&') 写进 process.env，Cookie 里自带的 & 会被切坏。
+ * 读取顺序：青龙 API 按条 → sqlite 按条 → process.env（仅按换行 / @#@ 拆，不按 &）。
+ */
+async function loadEnvValues(name) {
+  if (!name) return [];
+  const fromApi = await valuesFromQlApi(name);
+  if (fromApi.length) {
+    console.log(`环境变量 ${name} 来源: 青龙 API，共 ${fromApi.length} 条`);
+    return fromApi;
+  }
+  const fromDb = valuesFromQlDb(name);
+  if (fromDb.length) {
+    console.log(`环境变量 ${name} 来源: 青龙数据库，共 ${fromDb.length} 条`);
+    return fromDb;
+  }
+  const fromEnv = splitRawValues(env(name));
+  if (fromEnv.length) {
+    console.log(
+      `环境变量 ${name} 来源: process.env，共 ${fromEnv.length} 条（同名变量若被 & 拼接，请改用多条同名变量或换行）`
+    );
+  }
+  return fromEnv;
+}
+
+function parseAccountValues(values, extraKeys = []) {
+  const accounts = [];
+  for (const raw of values || []) {
+    accounts.push(...parseAccounts(raw, extraKeys));
+  }
+  return accounts.map((account, index) => {
+    if (!account.remarks || /^账号\d+$/.test(account.remarks)) {
+      return { ...account, remarks: `账号${index + 1}` };
+    }
+    return account;
+  });
+}
+
+async function loadAccounts(nameOrNames, extraKeys = []) {
+  const names = Array.isArray(nameOrNames) ? nameOrNames : [nameOrNames];
+  for (const name of names) {
+    const values = await loadEnvValues(name);
+    if (values.length) return parseAccountValues(values, extraKeys);
+  }
+  return [];
 }
 
 function normalizeAccount(item, extraKeys, index) {
@@ -368,6 +497,8 @@ module.exports = {
   DEFAULT_UA,
   env,
   parseAccounts,
+  loadEnvValues,
+  loadAccounts,
   sleep,
   md5,
   letter,

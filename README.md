@@ -48,7 +48,7 @@ ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|miho
 
 ## 环境变量
 
-多账号用 `&` 或换行分隔。多个字段用 `#` 拼接，也支持 JSON 数组。
+多账号请在青龙里建多个同名环境变量，或在一个变量里用换行 / `@#@` 分隔。不要用 `&` 拼接，Cookie 里经常自带 `&`，会被切坏。多个字段仍用 `#` 拼接，也支持 JSON 数组。
 
 失败会走青龙 `sendNotify` 推送；全部成功默认不推。需要每次都推送时设置 `QL_NOTIFY_ALL=true`。
 

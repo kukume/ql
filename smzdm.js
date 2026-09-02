@@ -8,7 +8,7 @@
  * 若未配置打码，将仅执行 App 签到
  */
 
-const { Env, env, parseAccounts, request, md5, extract, geeTest, runAccounts } = require('./utils');
+const { Env, env, loadAccounts, request, md5, extract, geeTest, runAccounts } = require('./utils');
 
 const $ = new Env('什么值得买签到');
 
@@ -71,7 +71,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('SMZDM_COOKIE'), ['cookie']);
+  const accounts = await loadAccounts('SMZDM_COOKIE', ['cookie']);
   await runAccounts($?.name || '什么值得买', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);
