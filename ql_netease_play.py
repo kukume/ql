@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 new Env('网易云网页播放上报');
-cron: 18 8 * * *
+cron: */5 * * * *
 """
 
 from __future__ import annotations

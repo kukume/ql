@@ -42,7 +42,7 @@ ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|miho
 | `smzdm.js` | 什么值得买 | `32 6 * * *` |
 | `weibo.js` | 微博超话 | `51 4 * * *` |
 | `step.js` | 小米运动 / 乐心运动刷步 | `12 5 * * *` |
-| `ql_netease_play.py` | 网易云网页播放上报 | `18 8 * * *` |
+| `ql_netease_play.py` | 网易云网页播放上报 | `*/5 * * * *` |
 
 推送、开播提醒等 Telegram 实时任务没有迁过来，青龙只覆盖自动签到/刷步/听歌。JS 和 Python 可以放在同一个订阅里，文件后缀填 `js py`。
 
