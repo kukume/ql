@@ -7,7 +7,7 @@
  * 或 JSON：[{"token":"...","userid":"...","kuGoo":"...","mid":"..."}]
  */
 
-const { Env, env, parseAccounts, request, sleep, md5, letter, runAccounts } = require('./utils');
+const { Env, loadAccounts, request, sleep, md5, letter, runAccounts } = require('./utils');
 
 const $ = new Env('酷狗签到');
 
@@ -101,7 +101,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('KUGOU'), ['token', 'userid', 'kuGoo', 'mid']);
+  const accounts = await loadAccounts('KUGOU', ['token', 'userid', 'kuGoo', 'mid']);
   await runAccounts($?.name || '酷狗', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

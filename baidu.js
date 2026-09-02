@@ -4,13 +4,12 @@
  * const $ = new Env("百度签到");
  *
  * export BAIDU_COOKIE="BDUSS=xxx; STOKEN=xxx;"
- * 多账号用 & 或换行分隔，也支持 JSON：[{"cookie":"...","remarks":"小号"}]
+ * 多账号：青龙建多个同名变量，或换行 / @#@ 分隔
  */
 
 const {
   Env,
-  env,
-  parseAccounts,
+  loadAccounts,
   request,
   sleep,
   mergeCookie,
@@ -175,7 +174,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('BAIDU_COOKIE'), ['cookie']);
+  const accounts = await loadAccounts('BAIDU_COOKIE', ['cookie']);
   await runAccounts($?.name || '百度', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

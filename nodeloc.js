@@ -7,7 +7,7 @@
  * 或 JSON：[{"cookie":"...","csrf":"..."}]
  */
 
-const { Env, env, parseAccounts, request, runAccounts } = require('./utils');
+const { Env, loadAccounts, request, runAccounts } = require('./utils');
 
 const $ = new Env('NodeLoc签到');
 
@@ -29,7 +29,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('NODELOC') || env('NODELOC_COOKIE'), ['cookie', 'csrf']);
+  const accounts = await loadAccounts(['NODELOC', 'NODELOC_COOKIE'], ['cookie', 'csrf']);
   await runAccounts($?.name || 'NodeLoc', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

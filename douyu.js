@@ -4,10 +4,10 @@
  * const $ = new Env("斗鱼鱼吧签到");
  *
  * export DOUYU_COOKIE="acf_auth=xxx; ..."
- * 多账号用 & 或换行分隔
+ * 多账号：青龙建多个同名变量，或换行 / @#@ 分隔
  */
 
-const { Env, env, parseAccounts, request, sleep, mergeCookie, cookieValue, runAccounts } = require('./utils');
+const { Env, loadAccounts, request, sleep, mergeCookie, cookieValue, runAccounts } = require('./utils');
 
 const $ = new Env('斗鱼鱼吧签到');
 
@@ -74,7 +74,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('DOUYU_COOKIE'), ['cookie']);
+  const accounts = await loadAccounts('DOUYU_COOKIE', ['cookie']);
   await runAccounts($?.name || '斗鱼鱼吧', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

@@ -4,10 +4,10 @@
  * const $ = new Env("微博超话签到");
  *
  * export WEIBO_COOKIE="SUB=xxx; ..."
- * 多账号用 & 或换行分隔
+ * 多账号：青龙建多个同名变量，或换行 / @#@ 分隔
  */
 
-const { Env, env, parseAccounts, request, mergeCookie, runAccounts } = require('./utils');
+const { Env, loadAccounts, request, mergeCookie, runAccounts } = require('./utils');
 
 const $ = new Env('微博超话签到');
 
@@ -60,7 +60,7 @@ async function sign(account) {
 }
 
 (async () => {
-  const accounts = parseAccounts(env('WEIBO_COOKIE'), ['cookie']);
+  const accounts = await loadAccounts('WEIBO_COOKIE', ['cookie']);
   await runAccounts($?.name || '微博超话', accounts, sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);

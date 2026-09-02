@@ -16,7 +16,7 @@
  * 极验打码（可选）：export DAMAGOU_KEY="" 或 TWOCAPTCHA_KEY=""
  */
 
-const { Env, env, parseAccounts, request, sleep, md5, letter, uuid, geeTest, runAccounts } = require('./utils');
+const { Env, env, loadAccounts, request, sleep, md5, letter, uuid, geeTest, runAccounts } = require('./utils');
 
 const $ = new Env('米哈游签到');
 
@@ -244,10 +244,11 @@ async function sign(account) {
   return msgs.join('；');
 }
 
-function loadAccounts() {
-  if (env('MIHOYO')) return parseAccounts(env('MIHOYO'), ['cookie']);
-  const cookies = parseAccounts(env('MIHOYO_COOKIE'), ['cookie']);
-  const tokens = parseAccounts(env('MIHOYO_TOKEN'), ['aid', 'token', 'mid']);
+async function collectAccounts() {
+  const combined = await loadAccounts('MIHOYO', ['cookie']);
+  if (combined.length) return combined;
+  const cookies = await loadAccounts('MIHOYO_COOKIE', ['cookie']);
+  const tokens = await loadAccounts('MIHOYO_TOKEN', ['aid', 'token', 'mid']);
   const max = Math.max(cookies.length, tokens.length);
   const list = [];
   for (let i = 0; i < max; i++) {
@@ -261,7 +262,7 @@ function loadAccounts() {
 }
 
 (async () => {
-  await runAccounts($?.name || '米哈游', loadAccounts(), sign);
+  await runAccounts($?.name || '米哈游', await collectAccounts(), sign);
 })().catch((e) => {
   console.log(`❌ ${e.message || e}`);
   process.exit(1);
