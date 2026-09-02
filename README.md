@@ -14,16 +14,17 @@
 | 类型 | 公开仓库 |
 | 链接 | `https://github.com/kukume/ql.git` |
 | 定时 | `0 8 * * *`（每天拉一次更新即可） |
-| 白名单 | `baidu\|bilibili\|douyu\|ecloud\|kugou\|mihoyo\|nodeseek\|nodeloc\|smzdm\|weibo\|step` |
+| 白名单 | `baidu\|bilibili\|douyu\|ecloud\|kugou\|mihoyo\|nodeseek\|nodeloc\|smzdm\|weibo\|step\|netease` |
 | 黑名单 | `README\|utils` |
 | 依赖文件 | `utils` |
+| 文件后缀 | `js py` |
 | 分支 | `main` |
 | 自动添加任务 | 是 |
 
 命令行等价：
 
 ```bash
-ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|mihoyo|nodeseek|nodeloc|smzdm|weibo|step" "README|utils" "utils"
+ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|mihoyo|nodeseek|nodeloc|smzdm|weibo|step|netease" "README|utils" "utils" "main" "js py"
 ```
 
 订阅后会自动创建以下任务（cron 写在各脚本头部）：
@@ -41,8 +42,9 @@ ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|miho
 | `smzdm.js` | 什么值得买 | `32 6 * * *` |
 | `weibo.js` | 微博超话 | `51 4 * * *` |
 | `step.js` | 小米运动 / 乐心运动刷步 | `12 5 * * *` |
+| `ql_netease_play.py` | 网易云听歌打卡 | `18 4 * * *` |
 
-推送、开播提醒等 Telegram 实时任务没有迁过来，青龙只覆盖自动签到/刷步。
+推送、开播提醒等 Telegram 实时任务没有迁过来，青龙只覆盖自动签到/刷步/听歌。JS 和 Python 脚本可以放在同一个订阅里，文件后缀填 `js py` 即可。
 
 ## 环境变量
 
@@ -133,6 +135,22 @@ export SMZDM_COOKIE="cookie"
 export WEIBO_COOKIE="SUB=xxx; ..."
 ```
 
+### 网易云听歌
+
+浏览器登录 [music.163.com](https://music.163.com/) 后，从 Cookie 里复制 `MUSIC_U` 和 `__csrf`。
+
+```
+export NETEASE_COOKIE="MUSIC_U=xxx; __csrf=xxx;"
+# 可选：每次上报首数，默认 300
+export NETEASE_PLAY_COUNT="300"
+# 可选：指定歌单 id，逗号分隔；不填则用个性推荐 + 热歌/新歌/飙升/原创榜
+export NETEASE_PLAYLIST="3778678,3779629"
+```
+
+只需 `MUSIC_U` 值也可以。多账号用 `&` 或换行，也支持 JSON。
+
+Python 依赖：`requests`（青龙一般已有）。未安装 `pycryptodome` 时会走本机 `openssl` 做 weapi 加密。
+
 ### 刷步数
 
 ```
@@ -144,5 +162,5 @@ export LEXIN_STEP="cookie#userid#accessToken#20000#1"
 
 ## 运行环境
 
-- 青龙 2.15+（Node 18+，自带 `fetch`）
+- 青龙 2.15+（Node 18+，自带 `fetch`；Python 脚本需要 `requests`）
 - 解析贴吧页面时如已安装 `cheerio` 会优先使用（青龙默认带）
