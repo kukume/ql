@@ -424,7 +424,6 @@ def main() -> None:
     title = "网易云音乐人VIP续期 成功%s 失败%s" % (success, fail)
     body = "\n".join(summary) or "无结果"
     log(title)
-    log(body)
     notify(title, body)
     if fail:
         raise SystemExit(1)
