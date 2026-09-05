@@ -43,6 +43,7 @@ ql repo https://github.com/kukume/ql.git "baidu|bilibili|douyu|ecloud|kugou|miho
 | `weibo.js` | 微博超话 | `51 4 * * *` |
 | `step.js` | 小米运动 / 乐心运动刷步 | `12 5 * * *` |
 | `ql_netease_play.py` | 网易云网页播放上报 | `*/5 * * * *` |
+| `ql_netease_musician.py` | 网易云音乐人黑胶VIP续期 | `32 8 * * *` |
 
 推送、开播提醒等 Telegram 实时任务没有迁过来，青龙只覆盖自动签到/刷步/听歌。JS 和 Python 可以放在同一个订阅里，文件后缀填 `js py`。
 
@@ -149,6 +150,15 @@ export NETEASE_LEVEL="exhigh"
 ```
 
 多账号：青龙里建多个同名 `NETEASE_COOKIE`，或一个变量里换行（每账号一行），也可用 `@#@` 分隔。`wait=true` 时每遍会等一首歌的时长，次数多时把任务超时调大。
+
+### 网易云音乐人任务
+
+和播放上报共用 `NETEASE_COOKIE`。只查黑胶续期页 `vip/info`。650 次播放直接忽略。
+
+- **发布1条近期动态**：对齐 Kotlin `shareMySong`，Node 拿 `checkToken` 后分享自己的歌到动态，发完即删。青龙需要 `node`
+- **图文笔记**：发 mlog，发完即删
+
+不认识的只记日志。
 
 Python 依赖：`requests`、`pycryptodome`（或 `pycryptodomex`）。
 
