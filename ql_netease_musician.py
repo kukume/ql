@@ -296,42 +296,12 @@ def task_blob(task: Dict[str, Any]) -> str:
 def classify_action(task: Dict[str, Any]) -> str:
     blob = task_blob(task)
     if any(k in blob for k in ("播放", "recently_play_count", "play_count")):
-        return "play"
+        return "ignore"
     if any(k in blob for k in ("图文笔记", "notebook_publish", "mlog")):
         return "mlog"
     if any(k in blob for k in ("发布动态", "近期动态", "musician_comment_action")):
         return "event"
     return "unknown"
-
-
-def play_task_done(task: Dict[str, Any]) -> bool:
-    if task_done(task):
-        return True
-    try:
-        rate = int(task.get("progressRate") or 0)
-        total = int(task.get("totalCompleteNum") or 0)
-    except (TypeError, ValueError):
-        return False
-    return total > 0 and rate >= total
-
-
-def play_requirement_met(info: Dict[str, Any]) -> Optional[str]:
-    """听歌任务已达标则返回跳过原因，否则 None（未发现任务也不跳过）。"""
-    play_tasks = [t for t in flatten_tasks(info) if classify_action(t) == "play"]
-    if not play_tasks:
-        return None
-    for t in play_tasks:
-        log("  听歌任务: " + format_task(t))
-    unfinished = [t for t in play_tasks if not play_task_done(t)]
-    if unfinished:
-        t = unfinished[0]
-        log(
-            "  听歌未达标 %s/%s，继续上报"
-            % (t.get("progressRate"), t.get("totalCompleteNum"))
-        )
-        return None
-    t = play_tasks[0]
-    return "听歌任务已完成 %s/%s" % (t.get("progressRate"), t.get("totalCompleteNum"))
 
 
 def format_task(task: Dict[str, Any]) -> str:
@@ -395,9 +365,7 @@ def run_account(ai: int, cookie: str) -> Tuple[List[str], bool]:
         )
     )
     for task in tasks:
-        action = classify_action(task)
-        if action == "play":
-            log("  忽略听歌: " + format_task(task))
+        if classify_action(task) == "ignore":
             continue
         log("  " + format_task(task))
 
@@ -405,7 +373,7 @@ def run_account(ai: int, cookie: str) -> Tuple[List[str], bool]:
     need_mlog = False
     for task in tasks:
         action = classify_action(task)
-        if action == "play" or task_done(task):
+        if action == "ignore" or task_done(task):
             continue
         if action == "event":
             need_event = True

@@ -155,7 +155,7 @@ export NETEASE_LEVEL="exhigh"
 
 ### 网易云音乐人任务
 
-和播放上报共用 `NETEASE_COOKIE`。只查黑胶续期页 `vip/info`。听歌/650 次播放任务直接忽略，由 `ql_netease_play.py` 处理。
+和播放上报共用 `NETEASE_COOKIE`。只查黑胶续期页 `vip/info`。650 次播放直接忽略，这个脚本不管听歌。
 
 - **发布1条近期动态**：对齐 Kotlin `shareMySong`，Node 拿 `checkToken` 后分享自己的歌到动态，发完即删。青龙需要 `node`
 - **图文笔记**：发 mlog，发完即删

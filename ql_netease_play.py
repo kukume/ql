@@ -363,10 +363,21 @@ def notify(title: str, content: str) -> None:
             log("通知失败: %s" % exc)
 
 
-def listen_skip_reason(sess: requests.Session) -> Optional[str]:
-    """复用音乐人脚本的 vip/info 任务检测。听歌已达标则返回原因，检测失败不拦截上报。"""
+def listen_task_done(task: Dict[str, Any]) -> bool:
+    if task.get("missionStatus") == 100:
+        return True
     try:
-        from ql_netease_musician import play_requirement_met, vip_info
+        rate = int(task.get("progressRate") or 0)
+        total = int(task.get("totalCompleteNum") or 0)
+    except (TypeError, ValueError):
+        return False
+    return total > 0 and rate >= total
+
+
+def listen_skip_reason(sess: requests.Session) -> Optional[str]:
+    """查音乐人 vip/info。听歌任务已达标则跳过上报；音乐人脚本本身不管听歌。"""
+    try:
+        from ql_netease_musician import classify_action, flatten_tasks, format_task, vip_info
     except Exception as exc:
         log("  听歌任务检测不可用: %s" % exc)
         return None
@@ -376,7 +387,21 @@ def listen_skip_reason(sess: requests.Session) -> Optional[str]:
             "  音乐人=%s 近30日播放=%s canOpen=%s"
             % (info.get("isMusician"), info.get("recentPlayCount30"), info.get("canOpen"))
         )
-        return play_requirement_met(info)
+        play_tasks = [t for t in flatten_tasks(info) if classify_action(t) == "ignore"]
+        if not play_tasks:
+            return None
+        for t in play_tasks:
+            log("  听歌任务: " + format_task(t))
+        unfinished = [t for t in play_tasks if not listen_task_done(t)]
+        if unfinished:
+            t = unfinished[0]
+            log(
+                "  听歌未达标 %s/%s，继续上报"
+                % (t.get("progressRate"), t.get("totalCompleteNum"))
+            )
+            return None
+        t = play_tasks[0]
+        return "听歌任务已完成 %s/%s" % (t.get("progressRate"), t.get("totalCompleteNum"))
     except Exception as exc:
         log("  听歌任务检测失败，继续上报: %s" % exc)
         return None
