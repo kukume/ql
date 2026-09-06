@@ -151,9 +151,11 @@ export NETEASE_LEVEL="exhigh"
 
 多账号：青龙里建多个同名 `NETEASE_COOKIE`，或一个变量里换行（每账号一行），也可用 `@#@` 分隔。`wait=true` 时每遍会等一首歌的时长，次数多时把任务超时调大。
 
+每次上报前会查音乐人黑胶续期页 `vip/info` 里的听歌任务。已完成（例如近 30 天有效播放 650/650）就直接跳过，不再拉音频、不上报。查不到听歌任务或检测失败时仍按上面次数上报。
+
 ### 网易云音乐人任务
 
-和播放上报共用 `NETEASE_COOKIE`。只查黑胶续期页 `vip/info`。650 次播放直接忽略。
+和播放上报共用 `NETEASE_COOKIE`。只查黑胶续期页 `vip/info`。听歌/650 次播放任务直接忽略，由 `ql_netease_play.py` 处理。
 
 - **发布1条近期动态**：对齐 Kotlin `shareMySong`，Node 拿 `checkToken` 后分享自己的歌到动态，发完即删。青龙需要 `node`
 - **图文笔记**：发 mlog，发完即删
