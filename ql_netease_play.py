@@ -363,6 +363,50 @@ def notify(title: str, content: str) -> None:
             log("通知失败: %s" % exc)
 
 
+def listen_task_done(task: Dict[str, Any]) -> bool:
+    if task.get("missionStatus") == 100:
+        return True
+    try:
+        rate = int(task.get("progressRate") or 0)
+        total = int(task.get("totalCompleteNum") or 0)
+    except (TypeError, ValueError):
+        return False
+    return total > 0 and rate >= total
+
+
+def listen_skip_reason(sess: requests.Session) -> Optional[str]:
+    """查音乐人 vip/info。听歌任务已达标则跳过上报；音乐人脚本本身不管听歌。"""
+    try:
+        from ql_netease_musician import classify_action, flatten_tasks, format_task, vip_info
+    except Exception as exc:
+        log("  听歌任务检测不可用: %s" % exc)
+        return None
+    try:
+        info = vip_info(sess)
+        log(
+            "  音乐人=%s 近30日播放=%s canOpen=%s"
+            % (info.get("isMusician"), info.get("recentPlayCount30"), info.get("canOpen"))
+        )
+        play_tasks = [t for t in flatten_tasks(info) if classify_action(t) == "ignore"]
+        if not play_tasks:
+            return None
+        for t in play_tasks:
+            log("  听歌任务: " + format_task(t))
+        unfinished = [t for t in play_tasks if not listen_task_done(t)]
+        if unfinished:
+            t = unfinished[0]
+            log(
+                "  听歌未达标 %s/%s，继续上报"
+                % (t.get("progressRate"), t.get("totalCompleteNum"))
+            )
+            return None
+        t = play_tasks[0]
+        return "听歌任务已完成 %s/%s" % (t.get("progressRate"), t.get("totalCompleteNum"))
+    except Exception as exc:
+        log("  听歌任务检测失败，继续上报: %s" % exc)
+        return None
+
+
 def main() -> None:
     cookies = load_cookies()
     if not cookies:
@@ -389,6 +433,7 @@ def main() -> None:
     summary: List[str] = []
     fail = 0
     success = 0
+    skipped = 0
 
     for ai, cookie in enumerate(cookies, 1):
         if "MUSIC_U=" not in cookie:
@@ -396,6 +441,13 @@ def main() -> None:
             fail += 1
             continue
         sess = session_from_cookie(cookie)
+        skip = listen_skip_reason(sess)
+        if skip:
+            skipped += 1
+            line = "账号%s: %s，跳过" % (ai, skip)
+            summary.append(line)
+            log("[账号%s] %s，跳过" % (ai, skip))
+            continue
         for song_id in song_ids:
             for i in range(1, play_count + 1):
                 log("=== 账号%s 歌曲%s 第%s/%s 遍 ===" % (ai, song_id, i, play_count))
@@ -418,7 +470,7 @@ def main() -> None:
                 if interval and not (ai == len(cookies) and song_id == song_ids[-1] and i == play_count):
                     time.sleep(interval)
 
-    title = "网易云播放上报 成功%s 失败%s" % (success, fail)
+    title = "网易云播放上报 成功%s 跳过%s 失败%s" % (success, skipped, fail)
     body = "\n".join(summary) or "无结果"
     log(title)
     log(body)
